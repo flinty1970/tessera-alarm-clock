@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.1 - 2026-11-15
+
+- The wheels show three whole rows, and the keys under them are two rows: on, days and sound, then the seven days.
+
+## 0.5.0 - 2026-11-15
+
+- The card sets the time with wheels: hour, minute and AM or PM (hour and minute on a 24-hour screen). A narrow
+  card keeps the six step keys.
+
 ## 0.4.0 - 2026-11-15
 
 - Any days: a row of keys Mon to Sun on the card, and Weekends beside Every day and Weekdays. The switch "Alarm

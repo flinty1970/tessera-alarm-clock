@@ -213,7 +213,8 @@ class AlarmTile : public tessera::Tile {
   lv_obj_t *time_{}, *status_{}, *extra_{}, *title_{}, *icon_{};
 };
 
-// The card: the time large, six keys that move it, and two that turn the alarm on and choose its days.
+// The card: wheels for the hour, the minute and AM or PM on a wide card (six keys that move the time on a narrow
+// one), and keys that turn the alarm on and choose its days.
 class AlarmCard : public tessera::Card {
  public:
   explicit AlarmCard(AlarmClock *plugin) : plugin_(plugin) {}
@@ -225,8 +226,13 @@ class AlarmCard : public tessera::Card {
     has_tone_ = plugin_->has_tone();
     // A row of the seven days where the card is wide; a narrow card chooses them with the one key.
     day_row_ = per_row_ == 6;
-    const int rows = 6 / per_row_ + (has_tone_ ? 2 : 1) + (day_row_ ? 1 : 0);
-    const int kh = clamp((H * (day_row_ ? 64 : 55) / 100 - (rows - 1) * g) / rows, km, ui::mm(13));
+#if LV_USE_ROLLER
+    rollers_ = day_row_;
+#endif
+    // With the wheels the keys are two rows (on, days and the sound in one; the seven days), and leave the wheels
+    // the larger half of the card.
+    const int rows = rollers_ ? 2 : 6 / per_row_ + (has_tone_ ? 2 : 1) + (day_row_ ? 1 : 0);
+    const int kh = clamp((H * (rollers_ ? 40 : day_row_ ? 64 : 55) / 100 - (rows - 1) * g) / rows, km, ui::mm(rollers_ ? 11 : 13));
     const int keys_h = rows * kh + (rows - 1) * g;
     const int head = H - keys_h - g;
     const int sh = ui::line_height(Font::BODY);
@@ -247,32 +253,45 @@ class AlarmCard : public tessera::Card {
 
     const int kw = (W - (per_row_ - 1) * g) / per_row_;
     int y = head + g;
-    for (int i = 0; i < 6; ++i) {
-      const int col = i % per_row_;
-      if (i && !col) y += kh + g;
-      step_[i].make(c.parent, col * (kw + g), y, kw, kh);
+    if (rollers_) {
+      make_rollers(c.parent, W, head, sh, g);
+    } else {
+      for (int i = 0; i < 6; ++i) {
+        const int col = i % per_row_;
+        if (i && !col) y += kh + g;
+        step_[i].make(c.parent, col * (kw + g), y, kw, kh);
+      }
+      y += kh + g;
     }
-    y += kh + g;
-    const int half = (W - g) / 2;
-    on_.make(c.parent, 0, y, half, kh);
-    days_.make(c.parent, half + g, y, W - half - g, kh);
+    const int half = (W - g) / 2, third = (W - 2 * g) / 3;
+    if (rollers_ && has_tone_) {
+      on_.make(c.parent, 0, y, third, kh);
+      days_.make(c.parent, third + g, y, third, kh);
+      tone_.make(c.parent, 2 * (third + g), y, W - 2 * (third + g), kh);
+    } else {
+      on_.make(c.parent, 0, y, half, kh);
+      days_.make(c.parent, half + g, y, W - half - g, kh);
+    }
     // The sound, on a screen with a speaker: a tap takes the next one and plays it once.
     if (day_row_) {
       y += kh + g;
       const int dw = (W - 6 * g) / 7;
       for (int i = 0; i < 7; ++i) day_[i].make(c.parent, i * (dw + g), y, i == 6 ? W - 6 * (dw + g) : dw, kh);
     }
-    if (has_tone_) tone_.make(c.parent, 0, y + kh + g, W, kh);
+    if (has_tone_ && !rollers_) tone_.make(c.parent, 0, y + kh + g, W, kh);
     paint(tessera::epoch());
   }
 
   void on_tick(uint32_t epoch) override { paint(epoch); }
-  void on_theme() override { paint(tessera::epoch()); }
+  void on_theme() override {
+    style_rollers();
+    paint(tessera::epoch());
+  }
 
   void on_tap() override {
     const tessera::Point p = tessera::tap_point();
     static const int DELTA[6] = {-60, 60, -10, 10, -1, 1};
-    for (int i = 0; i < 6; ++i)
+    for (int i = 0; i < 6 && !rollers_; ++i)
       if (step_[i].has(p)) plugin_->add_minutes(DELTA[i]);
     if (on_.has(p)) plugin_->set_enabled(!plugin_->enabled());
     if (has_tone_ && tone_.has(p)) plugin_->next_tone();
@@ -288,8 +307,106 @@ class AlarmCard : public tessera::Card {
   }
 
  private:
+  // The wheels: hour, minute and (where the screen writes 7:00 AM) AM or PM, under the line that says when it rings.
+  void make_rollers(lv_obj_t *parent, int W, int head, int sh, int g) {
+#if LV_USE_ROLLER
+    twelve_ = plugin_->time_text(tessera::epoch()).find('M') != std::string::npos;
+    const int n = twelve_ ? 3 : 2, top = sh + g, rh = std::max(ui::mm(12), head - top);
+    const int rw = std::min((W - (n - 1) * g) / n, ui::mm(32));
+    const int x0 = (W - (n * rw + (n - 1) * g)) / 2;
+    // Three rows show whole: the chosen one in the middle, its neighbours above and below.
+    const int space = ui::px(8);
+    Font face = Font::BODY_LARGE;
+    for (Font f : {Font::VALUE, Font::HEADLINE, Font::TITLE})
+      if (3 * ui::line_height(f) + 2 * space + ui::px(8) <= rh) {
+        face = f;
+        break;
+      }
+    std::string hours, minutes;
+    char b[8];
+    for (int i = 0; i < (twelve_ ? 12 : 24); ++i) {
+      snprintf(b, sizeof b, twelve_ ? "%d" : "%02d", twelve_ && i == 0 ? 12 : i);
+      hours += i ? "\n" : "";
+      hours += b;
+    }
+    for (int i = 0; i < 60; ++i) {
+      snprintf(b, sizeof b, "%02d", i);
+      minutes += i ? "\n" : "";
+      minutes += b;
+    }
+    const char *const options[3] = {hours.c_str(), minutes.c_str(), "AM\nPM"};
+    for (int i = 0; i < n; ++i) {
+      lv_obj_t *r = lv_roller_create(parent);
+      lv_roller_set_options(r, options[i], i < 2 ? LV_ROLLER_MODE_INFINITE : LV_ROLLER_MODE_NORMAL);
+      ui::set_font(r, face);
+      lv_obj_set_style_text_font(r, lv_obj_get_style_text_font(r, LV_PART_MAIN), LV_PART_SELECTED);
+      lv_obj_set_style_text_align(r, LV_TEXT_ALIGN_CENTER, 0);
+      lv_obj_set_style_text_line_space(r, space, 0);
+      lv_obj_set_style_border_width(r, 0, 0);
+      lv_obj_set_style_radius(r, ui::px(12), 0);
+      lv_obj_set_style_bg_opa(r, LV_OPA_COVER, 0);
+      lv_obj_set_style_bg_opa(r, LV_OPA_COVER, LV_PART_SELECTED);
+      lv_obj_set_size(r, rw, rh);
+      lv_obj_set_pos(r, x0 + i * (rw + g), top);
+      lv_obj_add_event_cb(r, &AlarmCard::roller_event, LV_EVENT_VALUE_CHANGED, this);
+      roll_[i] = r;
+    }
+    style_rollers();
+#endif
+  }
+
+  // The wheels' colours, again when the screen goes light or dark.
+  void style_rollers() {
+    for (lv_obj_t *r : roll_) {
+      if (!r) continue;
+      lv_obj_set_style_bg_color(r, ui::color(theme::RAISED), 0);
+      lv_obj_set_style_text_color(r, ui::color(theme::MUTED), 0);
+      lv_obj_set_style_bg_color(r, ui::tone_color(Tone::ACCENT, theme::INK), LV_PART_SELECTED);
+      lv_obj_set_style_text_color(r, ui::color(theme::ON_ACCENT), LV_PART_SELECTED);
+    }
+  }
+
+#if LV_USE_ROLLER
+  // A wheel was turned: the three together are the alarm's new time.
+  static void roller_event(lv_event_t *e) {
+    auto *self = static_cast<AlarmCard *>(lv_event_get_user_data(e));
+    if (self->syncing_ || !self->roll_[0] || !self->roll_[1]) return;
+    int h = lv_roller_get_selected(self->roll_[0]);
+    const int m = lv_roller_get_selected(self->roll_[1]);
+    if (self->twelve_ && self->roll_[2] && lv_roller_get_selected(self->roll_[2])) h += 12;
+    self->plugin_->add_minutes(h * 60 + m - (self->plugin_->hour() * 60 + self->plugin_->minute()));
+    self->paint(tessera::epoch());
+  }
+
+  // A wheel shows the alarm's time, also when Home Assistant changed it; one under a finger is left alone.
+  void set_roll(int index, int want) {
+    lv_obj_t *r = roll_[index];
+    if (!r || lv_obj_is_scrolling(r) || static_cast<int>(lv_roller_get_selected(r)) == want) return;
+    syncing_ = true;
+    lv_roller_set_selected(r, want, LV_ANIM_OFF);
+    syncing_ = false;
+  }
+#endif
+
   void paint(uint32_t epoch) {
-    static const char *const WORD[6] = {"hour_down", "hour_up", "ten_down", "ten_up", "minute_down", "minute_up"};
+    if (rollers_) {
+      show(now_, false);
+      show(time_, false);
+      show(icon_, false);
+      std::string line, more;
+      const Tone tone = state_line(plugin_, epoch, width_, line, more);
+      ui::set_text(status_, line);
+      ui::set_tone(status_, tone, theme::MUTED);
+      lv_obj_set_pos(status_, 0, 0);
+#if LV_USE_ROLLER
+      const int h = plugin_->hour();
+      set_roll(0, twelve_ ? h % 12 : h);
+      set_roll(1, plugin_->minute());
+      if (twelve_) set_roll(2, h >= 12 ? 1 : 0);
+#endif
+      paint_keys();
+      return;
+    }
     const std::string time = plugin_->time_text(epoch);
     // Three lines: the time it is now, the alarm's time large, and when it rings. On a small card the first gives way,
     // so the alarm's time keeps a size worth reading.
@@ -320,21 +437,31 @@ class AlarmCard : public tessera::Card {
     ui::set_text(status_, status);
     ui::set_tone(status_, state, theme::MUTED);
     lv_obj_set_pos(status_, 0, top + th);
-    for (int i = 0; i < 6; ++i) step_[i].paint(plugin_->text(WORD[i]), false);
+    paint_keys();
+  }
+
+  void paint_keys() {
+    static const char *const WORD[6] = {"hour_down", "hour_up", "ten_down", "ten_up", "minute_down", "minute_up"};
+    for (int i = 0; i < 6 && !rollers_; ++i) step_[i].paint(plugin_->text(WORD[i]), false);
     on_.paint(plugin_->text(plugin_->enabled() ? "alarm_on" : "alarm_off"), plugin_->enabled() ? Tone::GOOD : Tone::ALERT);
     if (plugin_->snoozed_until()) days_.paint(plugin_->text("cancel_snooze"), true);
     else days_.paint(plugin_->days() == 127 ? std::string(plugin_->text("every_day")) : plugin_->days_text(), false);
     static const char *const DAY[7] = {"day_mon", "day_tue", "day_wed", "day_thu", "day_fri", "day_sat", "day_sun"};
     if (day_row_)
       for (int i = 0; i < 7; ++i) day_[i].paint(plugin_->text(DAY[i]), ((plugin_->days() >> i) & 1) != 0);
-    if (has_tone_) tone_.paint(tessera::fill(plugin_->text("tone_key"), "name", plugin_->tone_name()), false);
+    if (has_tone_) {
+      // "Sound: Chime" where the key has the room, else the sound's name alone.
+      const std::string full = tessera::fill(plugin_->text("tone_key"), "name", plugin_->tone_name());
+      tone_.paint(ui::text_width(full, Font::BODY_LARGE) <= tone_.w - ui::px(8) ? full : plugin_->tone_name(), false);
+    }
   }
 
   AlarmClock *plugin_;
   int per_row_ = 6, head_ = 0, width_ = 0, status_h_ = 0;
   lv_obj_t *now_{}, *time_{}, *status_{}, *icon_{};
   Key step_[6], on_, days_, tone_, day_[7];
-  bool has_tone_ = false, day_row_ = false;
+  bool has_tone_ = false, day_row_ = false, rollers_ = false, twelve_ = false, syncing_ = false;
+  lv_obj_t *roll_[3]{};
 };
 
 // The popup while the alarm rings: the time, and Snooze and Stop. Closed any other way (its close key, a tap beside
