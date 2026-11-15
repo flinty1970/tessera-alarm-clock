@@ -53,7 +53,7 @@ CONFIG_SCHEMA = cv.All(
             cv.Required(CONF_RINGING): cv.use_id(binary_sensor.BinarySensor),
             cv.Optional(CONF_SPEAKER): cv.use_id(speaker.Speaker),
             cv.Optional(CONF_SOUND_ON): cv.use_id(switch.Switch),
-            cv.Optional("full_volume"): cv.use_id(switch.Switch),
+            cv.Optional("volume"): cv.use_id(number.Number),
             cv.Optional(CONF_TONE): cv.use_id(select.Select),
         }
     ).extend(cv.COMPONENT_SCHEMA),
@@ -77,7 +77,7 @@ async def to_code(config):
             cg.add(var.set_alarm(index, smart_display.sound(config[CONF_ID], sound.stem, sound)))
         if CONF_SOUND_ON in config:
             cg.add(var.set_sound_on(await cg.get_variable(config[CONF_SOUND_ON])))
-        if "full_volume" in config:
-            cg.add(var.set_full_volume(await cg.get_variable(config["full_volume"])))
+        if "volume" in config:
+            cg.add(var.set_volume_number(await cg.get_variable(config["volume"])))
         if CONF_TONE in config:
             cg.add(var.set_tone(await cg.get_variable(config[CONF_TONE])))

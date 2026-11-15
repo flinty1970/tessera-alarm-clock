@@ -9,13 +9,22 @@ switch:
     optimistic: true
     restore_mode: RESTORE_DEFAULT_ON
     entity_category: config
-  # While the alarm rings the speaker is at its loudest, whatever the screen's volume; it goes back afterwards.
+
+# How loud the alarm rings, whatever the screen's volume was left at; that volume comes back when the alarm stops.
+# 100 here is 80 % of what the speaker can do: beyond that a small one (4 ohms, 3 watts) distorts.
+number:
   - platform: template
-    id: alarm_clock_full_volume
-    name: "Alarm full volume"
-    icon: mdi:volume-plus
+    id: alarm_clock_volume
+    name: "Alarm volume"
+    icon: mdi:volume-high
+    min_value: 10
+    max_value: 100
+    step: 5
+    mode: slider
+    unit_of_measurement: "%"
     optimistic: true
-    restore_mode: RESTORE_DEFAULT_ON
+    initial_value: 100
+    restore_value: true
     entity_category: config
 
 select:
@@ -36,5 +45,5 @@ select:
 alarm_clock:
   speaker: ts_speaker
   sound_on: alarm_clock_sound_on
-  full_volume: alarm_clock_full_volume
+  volume: alarm_clock_volume
   tone: alarm_clock_tone

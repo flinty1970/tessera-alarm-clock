@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.3 - 2026-11-15
+
+- The alarm rings at its own volume, the number "Alarm volume" (100 % unless you change it, which is 80 % of the
+  speaker's own range): beyond that a small speaker distorts. It replaces the switch "Alarm full volume".
+- The sound is tested on a real speaker.
+
 ## 0.5.2 - 2026-11-15
 
 - The alarm rings at the speaker's full volume, whatever the screen's volume, and puts that back afterwards. The

@@ -36,8 +36,8 @@ class AlarmClock : public Component, public tessera::Plugin {
     speaker_ = s;
     sounds_.set_speaker(s);
   }
-  // The switch "Alarm full volume": the speaker at its loudest while the alarm rings.
-  void set_full_volume(switch_::Switch *s) { full_volume_ = s; }
+  // The number "Alarm volume": how loud the speaker is while the alarm rings, in percent.
+  void set_volume_number(number::Number *n) { ring_volume_ = n; }
   static constexpr int SOUNDS = 4;
   void set_alarm(int index, tessera::Sound s) {
     if (index >= 0 && index < SOUNDS) alarm_[index] = s;
@@ -102,7 +102,9 @@ class AlarmClock : public Component, public tessera::Plugin {
   // The sound the list chose.
   const tessera::Sound *chosen() const;
   tessera::Sound alarm_[SOUNDS];
-  switch_::Switch *sound_on_{}, *full_volume_{};
+  switch_::Switch *sound_on_{};
+  number::Number *ring_volume_{};
+  static constexpr float RING_LOUDEST = 0.8f;
   speaker::Speaker *speaker_{};
   float volume_before_ = 0;
   bool loud_ = false;
