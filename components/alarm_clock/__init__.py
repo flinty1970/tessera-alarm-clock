@@ -19,7 +19,7 @@ from esphome.const import CONF_ID
 DEPENDENCIES = ["smart_display", "binary_sensor", "number", "switch"]
 
 CONF_ENABLED = "enabled"
-CONF_WEEKDAYS = "weekdays"
+CONF_DAYS = "days"
 CONF_HOUR = "hour"
 CONF_MINUTE = "minute"
 CONF_SNOOZE = "snooze"
@@ -46,7 +46,7 @@ CONFIG_SCHEMA = cv.All(
         {
             cv.GenerateID(): cv.declare_id(AlarmClock),
             cv.Required(CONF_ENABLED): cv.use_id(switch.Switch),
-            cv.Required(CONF_WEEKDAYS): cv.use_id(switch.Switch),
+            cv.Required(CONF_DAYS): cv.use_id(number.Number),
             cv.Required(CONF_HOUR): cv.use_id(number.Number),
             cv.Required(CONF_MINUTE): cv.use_id(number.Number),
             cv.Required(CONF_SNOOZE): cv.use_id(number.Number),
@@ -65,7 +65,7 @@ async def to_code(config):
     await cg.register_component(var, config)
     await smart_display.register_plugin(var, __file__)
     cg.add(var.set_enabled_switch(await cg.get_variable(config[CONF_ENABLED])))
-    cg.add(var.set_weekdays_switch(await cg.get_variable(config[CONF_WEEKDAYS])))
+    cg.add(var.set_days_number(await cg.get_variable(config[CONF_DAYS])))
     cg.add(var.set_hour_number(await cg.get_variable(config[CONF_HOUR])))
     cg.add(var.set_minute_number(await cg.get_variable(config[CONF_MINUTE])))
     cg.add(var.set_snooze_number(await cg.get_variable(config[CONF_SNOOZE])))

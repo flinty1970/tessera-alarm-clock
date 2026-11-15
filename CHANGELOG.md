@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0 - 2026-11-15
+
+- Any days: a row of keys Mon to Sun on the card, and Weekends beside Every day and Weekdays. The switch "Alarm
+  weekdays only" gave way to the number "Alarm days" (127 every day, 31 weekdays, 96 the weekend).
+
 ## 0.3.3 - 2026-11-15
 
 - An alarm clock icon before the tile's title, in the colour of the alarm's state.

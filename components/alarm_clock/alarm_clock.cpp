@@ -81,7 +81,7 @@ static Tone state_line(const AlarmClock *plugin, uint32_t epoch, int width, std:
     return Tone::BUSY;
   }
   if (!plugin->enabled()) return Tone::ALERT;
-  const std::string mode = plugin->text(plugin->weekdays_only() ? "weekdays" : "daily");
+  const std::string mode = plugin->days_text();
   // "Daily - 7:00 AM - in 8:12:40" where that fits, else without the countdown, else the one word.
   const std::string at = mode + " - " + plugin->time_text(epoch);
   const std::string all = at + " - " + line;
@@ -223,8 +223,10 @@ class AlarmCard : public tessera::Card {
     // Six keys in a row where each keeps a finger's width, else two rows of three.
     per_row_ = W >= 6 * ui::mm(11) + 5 * g ? 6 : 3;
     has_tone_ = plugin_->has_tone();
-    const int rows = 6 / per_row_ + (has_tone_ ? 2 : 1);
-    const int kh = clamp((H * 55 / 100 - (rows - 1) * g) / rows, km, ui::mm(13));
+    // A row of the seven days where the card is wide; a narrow card chooses them with the one key.
+    day_row_ = per_row_ == 6;
+    const int rows = 6 / per_row_ + (has_tone_ ? 2 : 1) + (day_row_ ? 1 : 0);
+    const int kh = clamp((H * (day_row_ ? 64 : 55) / 100 - (rows - 1) * g) / rows, km, ui::mm(13));
     const int keys_h = rows * kh + (rows - 1) * g;
     const int head = H - keys_h - g;
     const int sh = ui::line_height(Font::BODY);
@@ -255,6 +257,11 @@ class AlarmCard : public tessera::Card {
     on_.make(c.parent, 0, y, half, kh);
     days_.make(c.parent, half + g, y, W - half - g, kh);
     // The sound, on a screen with a speaker: a tap takes the next one and plays it once.
+    if (day_row_) {
+      y += kh + g;
+      const int dw = (W - 6 * g) / 7;
+      for (int i = 0; i < 7; ++i) day_[i].make(c.parent, i * (dw + g), y, i == 6 ? W - 6 * (dw + g) : dw, kh);
+    }
     if (has_tone_) tone_.make(c.parent, 0, y + kh + g, W, kh);
     paint(tessera::epoch());
   }
@@ -272,8 +279,11 @@ class AlarmCard : public tessera::Card {
     if (days_.has(p)) {
       // While a snooze waits, this key ends it; otherwise it chooses the days.
       if (plugin_->snoozed_until()) plugin_->stop();
-      else plugin_->set_weekdays_only(!plugin_->weekdays_only());
+      else plugin_->next_days(!day_row_);
     }
+    if (day_row_)
+      for (int i = 0; i < 7; ++i)
+        if (day_[i].has(p)) plugin_->toggle_day(i);
     paint(tessera::epoch());
   }
 
@@ -313,15 +323,18 @@ class AlarmCard : public tessera::Card {
     for (int i = 0; i < 6; ++i) step_[i].paint(plugin_->text(WORD[i]), false);
     on_.paint(plugin_->text(plugin_->enabled() ? "alarm_on" : "alarm_off"), plugin_->enabled() ? Tone::GOOD : Tone::ALERT);
     if (plugin_->snoozed_until()) days_.paint(plugin_->text("cancel_snooze"), true);
-    else days_.paint(plugin_->text(plugin_->weekdays_only() ? "weekdays" : "every_day"), false);
+    else days_.paint(plugin_->days() == 127 ? std::string(plugin_->text("every_day")) : plugin_->days_text(), false);
+    static const char *const DAY[7] = {"day_mon", "day_tue", "day_wed", "day_thu", "day_fri", "day_sat", "day_sun"};
+    if (day_row_)
+      for (int i = 0; i < 7; ++i) day_[i].paint(plugin_->text(DAY[i]), ((plugin_->days() >> i) & 1) != 0);
     if (has_tone_) tone_.paint(tessera::fill(plugin_->text("tone_key"), "name", plugin_->tone_name()), false);
   }
 
   AlarmClock *plugin_;
   int per_row_ = 6, head_ = 0, width_ = 0, status_h_ = 0;
   lv_obj_t *now_{}, *time_{}, *status_{}, *icon_{};
-  Key step_[6], on_, days_, tone_;
-  bool has_tone_ = false;
+  Key step_[6], on_, days_, tone_, day_[7];
+  bool has_tone_ = false, day_row_ = false;
 };
 
 // The popup while the alarm rings: the time, and Snooze and Stop. Closed any other way (its close key, a tap beside
@@ -446,10 +459,48 @@ void AlarmClock::set_enabled(bool on) {
   tessera::refresh();
 }
 
-void AlarmClock::set_weekdays_only(bool on) {
-  if (weekdays_ == nullptr) return;
-  on ? weekdays_->turn_on() : weekdays_->turn_off();
+int AlarmClock::days() const {
+  const int mask = days_ != nullptr && days_->state == days_->state ? static_cast<int>(days_->state) & 127 : 127;
+  return mask ? mask : 127;
+}
+
+void AlarmClock::set_days(int mask) {
+  if (days_ == nullptr || !(mask & 127)) return;   // never no day at all
+  auto call = days_->make_call();
+  call.set_value(mask & 127);
+  call.perform();
   tessera::refresh();
+}
+
+void AlarmClock::toggle_day(int index) { set_days(days() ^ (1 << index)); }
+
+void AlarmClock::next_days(bool single_days) {
+  static const int ORDER[10] = {127, 31, 96, 1, 2, 4, 8, 16, 32, 64};
+  const int count = single_days ? 10 : 3, now = days();
+  int at = -1;
+  for (int i = 0; i < count; ++i)
+    if (ORDER[i] == now) at = i;
+  set_days(ORDER[(at + 1) % count]);
+}
+
+std::string AlarmClock::days_text() const {
+  static const char *const SHORT[7] = {"day_mon", "day_tue", "day_wed", "day_thu", "day_fri", "day_sat", "day_sun"};
+  static const char *const LONG[7] = {"day_monday", "day_tuesday", "day_wednesday", "day_thursday", "day_friday",
+                                      "day_saturday", "day_sunday"};
+  const int mask = days();
+  if (mask == 127) return text("daily");
+  if (mask == 31) return text("weekdays");
+  if (mask == 96) return text("weekends");
+  int count = 0;
+  for (int i = 0; i < 7; ++i) count += (mask >> i) & 1;
+  std::string out;
+  for (int i = 0; i < 7; ++i) {
+    if (!((mask >> i) & 1)) continue;
+    if (count == 1) return text(LONG[i]);
+    if (!out.empty()) out += " ";
+    out += text(SHORT[i]);
+  }
+  return out;
 }
 
 void AlarmClock::add_minutes(int delta) {
@@ -473,14 +524,10 @@ uint32_t AlarmClock::next_ring(uint32_t epoch) const {
     delta += 86400;
     days = 1;
   }
-  if (weekdays_only()) {
-    // 1 Sunday to 7 Saturday: at most two days of weekend to pass.
-    for (int i = 0; i < 2; ++i) {
-      const int weekday = (now.weekday - 1 + days) % 7 + 1;
-      if (weekday != 1 && weekday != 7) break;
-      delta += 86400;
-      ++days;
-    }
+  // 1 Sunday to 7 Saturday: at most six days to pass to the next one it rings on.
+  for (int i = 0; i < 6 && !rings_on((now.weekday - 1 + days) % 7 + 1); ++i) {
+    delta += 86400;
+    ++days;
   }
   return epoch + static_cast<uint32_t>(delta);
 }
@@ -552,10 +599,9 @@ void AlarmClock::on_interval(uint32_t now_ms) {
       start_ring(epoch);
     } else if (enabled() && epoch / 60 != handled_minute_) {
       const tessera::LocalTime now = tessera::local_time(epoch);
-      const bool weekend = now.weekday == 1 || now.weekday == 7;
       if (now.hour == hour() && now.minute == minute()) {
         handled_minute_ = epoch / 60;
-        if (!weekdays_only() || !weekend) start_ring(epoch);
+        if (rings_on(now.weekday)) start_ring(epoch);
       }
     }
   }
@@ -629,7 +675,6 @@ void AlarmClock::next_tone() {
 bool AlarmClock::settings(tessera::SettingsPage &page) {
   page.icon = "\U000F0020";
   page.toggle(text("alarm"), [this] { return enabled(); }, [this](bool on) { set_enabled(on); });
-  page.toggle(text("weekdays"), [this] { return weekdays_only(); }, [this](bool on) { set_weekdays_only(on); });
   page.number(text("snooze_minutes"), 1, 30, 1, text("minutes_unit"), [this] { return snooze_minutes(); },
               [this](int v) {
                 if (snooze_ == nullptr) return;

@@ -15,7 +15,7 @@ shows **Snooze** and **Stop**, and on a screen with a speaker it plays the sound
 1. Add the plugin to a screen in Tessera. The screen builds once.
 2. In Layout, place the **Alarm** tile from the library's Plugins group.
 3. Tap the tile on the screen. Set the time with the keys, tap **Alarm off** to turn it on (the key turns green and
-   reads **Alarm on**), and choose **Every day** or **Weekdays**.
+   reads **Alarm on**), and choose the days: **Every day**, **Weekdays** or **Weekends** with one key, or any days with the row Mon to Sun.
 
 ## In Home Assistant
 
@@ -25,7 +25,7 @@ The alarm is kept on the screen, and the screen's device in Home Assistant has t
 |---|---|
 | **Alarm** (switch) | The alarm on or off. Turning it off also ends a ring or a waiting snooze. |
 | **Alarm hour**, **Alarm minute** (numbers) | When it rings. |
-| **Alarm weekdays only** (switch) | Monday to Friday only. |
+| **Alarm days** (number) | The days it rings on, as a sum: 1 Monday, 2 Tuesday, 4 Wednesday, 8 Thursday, 16 Friday, 32 Saturday, 64 Sunday. 127 every day, 31 weekdays, 96 the weekend. |
 | **Alarm snooze minutes** (number) | How long a snooze lasts: 1 to 30 minutes, 9 unless you change it. |
 | **Alarm ringing** (binary sensor) | On while the alarm rings. |
 | **Alarm sound** (switch) | The sound on or off; the popup still shows. Only on a screen with a speaker. |

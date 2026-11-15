@@ -25,7 +25,7 @@ class AlarmClock : public Component, public tessera::Plugin {
   bool settings(tessera::SettingsPage &page) override;
 
   void set_enabled_switch(switch_::Switch *s) { enabled_ = s; }
-  void set_weekdays_switch(switch_::Switch *s) { weekdays_ = s; }
+  void set_days_number(number::Number *n) { days_ = n; }
   void set_hour_number(number::Number *n) { hour_ = n; }
   void set_minute_number(number::Number *n) { minute_ = n; }
   void set_snooze_number(number::Number *n) { snooze_ = n; }
@@ -47,7 +47,12 @@ class AlarmClock : public Component, public tessera::Plugin {
 #endif
 
   bool enabled() const { return enabled_ != nullptr && enabled_->state; }
-  bool weekdays_only() const { return weekdays_ != nullptr && weekdays_->state; }
+  // The days it rings on, as bits: 1 Monday, 2 Tuesday ... 64 Sunday (the number "Alarm days"); 127 is every day and
+  // never none. `weekday` is the screen's own: 1 Sunday to 7 Saturday.
+  int days() const;
+  bool rings_on(int weekday) const { return (days() >> ((weekday + 5) % 7)) & 1; }
+  // "Daily", "Weekdays", "Weekends", one day's name, or the short names of several.
+  std::string days_text() const;
   int hour() const;
   int minute() const;
   // How long a snooze lasts, in minutes: the number "Alarm snooze minutes", 9 unless someone set another.
@@ -57,7 +62,11 @@ class AlarmClock : public Component, public tessera::Plugin {
 
   // The keys of the card and the popup.
   void set_enabled(bool on);
-  void set_weekdays_only(bool on);
+  void set_days(int mask);
+  // One day on or off (0 Monday to 6 Sunday); the last day stays on.
+  void toggle_day(int index);
+  // The next of every day, weekdays and weekends, and with `single_days` then each day alone.
+  void next_days(bool single_days);
   void add_minutes(int delta);
   void snooze();
   void stop();
@@ -79,8 +88,8 @@ class AlarmClock : public Component, public tessera::Plugin {
   // The minute that runs now does not ring: a time set to this very minute waits for tomorrow.
   void skip_this_minute();
 
-  switch_::Switch *enabled_{}, *weekdays_{};
-  number::Number *hour_{}, *minute_{}, *snooze_{};
+  switch_::Switch *enabled_{};
+  number::Number *hour_{}, *minute_{}, *snooze_{}, *days_{};
   binary_sensor::BinarySensor *ringing_sensor_{};
   bool ringing_ = false;
   uint32_t ring_started_ = 0, snooze_until_ = 0, handled_minute_ = 0, close_at_ = 0;
