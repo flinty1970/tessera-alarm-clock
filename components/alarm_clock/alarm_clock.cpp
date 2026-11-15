@@ -690,8 +690,7 @@ void AlarmClock::start_ring(uint32_t epoch) {
   // At the alarm's own volume while it rings, whatever volume the screen was left at; end_ring() puts that back.
   if (speaker_ != nullptr && !loud_ && ring_volume_ != nullptr && ring_volume_->state == ring_volume_->state) {
     volume_before_ = speaker_->get_volume();
-    // 100 on the slider is 80 % of the speaker's own range: above that a small speaker distorts.
-    speaker_->set_volume(std::min(1.0f, std::max(0.1f, ring_volume_->state / 100.0f)) * RING_LOUDEST);
+    speaker_->set_volume(std::min(1.0f, std::max(0.0f, ring_volume_->state / 100.0f)));
     loud_ = true;
   }
 #endif

@@ -104,7 +104,6 @@ class AlarmClock : public Component, public tessera::Plugin {
   tessera::Sound alarm_[SOUNDS];
   switch_::Switch *sound_on_{};
   number::Number *ring_volume_{};
-  static constexpr float RING_LOUDEST = 0.8f;
   speaker::Speaker *speaker_{};
   float volume_before_ = 0;
   bool loud_ = false;

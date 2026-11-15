@@ -70,6 +70,6 @@
     "setting_days": "Days",
     "setting_days_hint": "A sum: Mon 1, Tue 2, Wed 4, Thu 8, Fri 16, Sat 32, Sun 64. Every day is 127.",
     "setting_volume": "Alarm volume",
-    "setting_volume_hint": "How loud the alarm rings, 10 to 100 %. The screen's own volume comes back afterwards."
+    "setting_volume_hint": "How loud the alarm rings, 0 to 100 %; 80 unless you change it. The screen's own volume comes back afterwards."
   }
 }

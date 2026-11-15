@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.5 - 2026-11-15
+
+- "Alarm volume" is the speaker's real volume again, 0 to 100 %, and 80 unless you change it.
+
 ## 0.5.4 - 2026-11-15
 
 - "Alarm volume" is among the plugin's settings in the editor; shorter hints there.

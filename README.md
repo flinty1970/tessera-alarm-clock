@@ -30,7 +30,7 @@ The alarm is kept on the screen, and the screen's device in Home Assistant has t
 | **Alarm ringing** (binary sensor) | On while the alarm rings. |
 | **Alarm sound** (switch) | The sound on or off; the popup still shows. Only on a screen with a speaker. |
 | **Alarm tone** (select) | Which of the sounds rings. Only on a screen with a speaker. |
-| **Alarm volume** (number) | How loud the alarm rings, 10 to 100 %, whatever the screen's volume; 100 unless you change it, which is 80 % of the speaker's own range, the loudest it stays clean. The screen's volume comes back when the alarm stops. Only on a screen with a speaker. |
+| **Alarm volume** (number) | How loud the alarm rings, 0 to 100 %, whatever the screen's volume; 80 unless you change it. The screen's volume comes back when the alarm stops. Only on a screen with a speaker. |
 
 Two automations people ask for (replace `bedroom` with your screen's name):
 
@@ -76,7 +76,7 @@ Beeps, Gentle chime, Rising and Classic alarm. All four were made for this plugi
 
 - Guition JC4880P443 (ESP32-P4, 4.3 inch): the tile, the card, the popup, snooze and the entities in Home Assistant.
 - The sound is tested on a Guition JC4880P443 (ESP32-P4, 4.3 inch) with a 4 ohm 3 watt speaker on its speaker socket.
-  At the speaker's full volume it distorts, so 100 % on **Alarm volume** is 80 % of what the speaker can do.
+  At full volume that speaker distorts, so the alarm rings at 80 % unless you set **Alarm volume** otherwise.
 
 ## Problems and ideas
 

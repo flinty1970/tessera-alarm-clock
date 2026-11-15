@@ -11,19 +11,19 @@ switch:
     entity_category: config
 
 # How loud the alarm rings, whatever the screen's volume was left at; that volume comes back when the alarm stops.
-# 100 here is 80 % of what the speaker can do: beyond that a small one (4 ohms, 3 watts) distorts.
+# 80 unless it is changed: at 100 a small speaker (4 ohms, 3 watts) distorts.
 number:
   - platform: template
     id: alarm_clock_volume
     name: "Alarm volume"
     icon: mdi:volume-high
-    min_value: 10
+    min_value: 0
     max_value: 100
     step: 5
     mode: slider
     unit_of_measurement: "%"
     optimistic: true
-    initial_value: 100
+    initial_value: 80
     restore_value: true
     entity_category: config
 
