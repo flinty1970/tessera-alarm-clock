@@ -119,10 +119,11 @@ class AlarmTile : public tessera::Tile {
     std::string status, extra;
     const Tone state = state_line(plugin_, epoch, width_, status, extra);
     const int sh = ui::line_height(Font::BODY);
-    // The countdown on a line of its own, then the title above the time: each only where the time stays large.
+    // The title is always above the time, which takes a smaller font on a low tile; the countdown gets a line of its
+    // own only where the time stays large.
     const int large = ui::line_height(Font::VALUE);
-    const bool second = !extra.empty() && height_ >= large + 2 * sh;
-    const bool titled = height_ >= large + (second ? 3 : 2) * sh;
+    const bool titled = !name_.empty();
+    const bool second = !extra.empty() && height_ >= large + (titled ? 3 : 2) * sh;
     const int under = (second ? 2 : 1) * sh, over = titled ? sh : 0;
     const Font face = fitting(time, width_, height_ - under - over);
     const int th = ui::line_height(face);
