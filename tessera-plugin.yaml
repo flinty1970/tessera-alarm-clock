@@ -2,7 +2,7 @@
 # shows Snooze and Stop; on a screen with a speaker it beeps. Every name, label and hint is a key into
 # translations/<language>.json, part "app".
 id: alarm_clock
-version: 0.5.3
+version: 0.5.4
 api: "0.18"
 icon: alarm
 maintainer: flinty1970
@@ -44,3 +44,4 @@ settings:
   # Only on a screen with a speaker (the part sound): elsewhere the editor shows it unavailable.
   - { key: alarm_sound, label: setting_sound, hint: setting_sound_hint }
   - { key: alarm_tone, label: setting_tone, hint: setting_tone_hint }
+  - { key: alarm_volume, label: setting_volume, hint: setting_volume_hint }

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.4 - 2026-11-15
+
+- "Alarm volume" is among the plugin's settings in the editor; shorter hints there.
+
 ## 0.5.3 - 2026-11-15
 
 - The alarm rings at its own volume, the number "Alarm volume" (100 % unless you change it, which is 80 % of the

@@ -62,12 +62,14 @@
     "part_sound": "Ring on the screen's speaker",
     "part_sound_hint": "The alarm's sound, over and over for ten minutes, or until you tap Snooze or Stop. Follows the screen's volume.",
     "setting_sound": "Alarm sound",
-    "setting_sound_hint": "The sound when the alarm rings, on a screen with a speaker. It follows the screen's volume.",
+    "setting_sound_hint": "The sound when the alarm rings, on a screen with a speaker.",
     "setting_tone": "Alarm tone",
     "setting_tone_hint": "Which sound rings: Beeps, Gentle chime, Rising or Classic alarm.",
     "setting_snooze": "Snooze minutes",
     "setting_snooze_hint": "How long Snooze waits before the alarm rings again, 1 to 30 minutes.",
     "setting_days": "Days",
-    "setting_days_hint": "The days it rings on, as a sum: 1 Monday, 2 Tuesday, 4 Wednesday, 8 Thursday, 16 Friday, 32 Saturday, 64 Sunday. 127 is every day, 31 weekdays, 96 the weekend."
+    "setting_days_hint": "A sum: Mon 1, Tue 2, Wed 4, Thu 8, Fri 16, Sat 32, Sun 64. Every day is 127.",
+    "setting_volume": "Alarm volume",
+    "setting_volume_hint": "How loud the alarm rings, 10 to 100 %. The screen's own volume comes back afterwards."
   }
 }
