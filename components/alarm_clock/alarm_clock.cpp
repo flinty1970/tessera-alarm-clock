@@ -56,7 +56,9 @@ struct Key {
 
 // The line under the alarm's time, and its colour: red "Off", or green "Daily" (or "Weekdays") with when it rings
 // next, where that fits in `width`. While it rings or a snooze waits the line says that, in the screen's own grey.
-static Tone state_line(const AlarmClock *plugin, uint32_t epoch, int width, std::string &line) {
+// A countdown that does not fit beside the rest comes back in `extra`, for a line of its own where there is room.
+static Tone state_line(const AlarmClock *plugin, uint32_t epoch, int width, std::string &line, std::string &extra) {
+  extra.clear();
   line = plugin->status_text(epoch);
   if (plugin->ringing()) return Tone::NORMAL;
   if (plugin->snoozed_until()) {
@@ -65,8 +67,10 @@ static Tone state_line(const AlarmClock *plugin, uint32_t epoch, int width, std:
     if (epoch && left > 0) {
       char count[16];
       snprintf(count, sizeof count, "%ld:%02ld", left / 60, left % 60);
-      const std::string all = line + " - " + tessera::fill(plugin->text("rings_in"), "time", count);
+      const std::string in = tessera::fill(plugin->text("rings_in"), "time", count);
+      const std::string all = line + " - " + in;
       if (ui::text_width(all, Font::BODY) <= width) line = all;
+      else extra = in;
     }
     return Tone::BUSY;
   }
@@ -75,9 +79,12 @@ static Tone state_line(const AlarmClock *plugin, uint32_t epoch, int width, std:
   // "Daily - 7:00 AM - in 8:12:40" where that fits, else without the countdown, else the one word.
   const std::string at = mode + " - " + plugin->time_text(epoch);
   const std::string all = at + " - " + line;
-  if (ui::text_width(all, Font::BODY) <= width) line = all;
-  else if (ui::text_width(at, Font::BODY) <= width) line = at;
-  else line = mode;
+  if (ui::text_width(all, Font::BODY) <= width) {
+    line = all;
+  } else {
+    extra = line;
+    line = ui::text_width(at, Font::BODY) <= width ? at : mode;
+  }
   return Tone::GOOD;
 }
 
@@ -94,6 +101,12 @@ class AlarmTile : public tessera::Tile {
     lv_obj_set_width(time_, width_);
     status_ = centred_label(c.parent, Font::BODY, theme::MUTED);
     lv_obj_set_width(status_, width_);
+    extra_ = centred_label(c.parent, Font::BODY, theme::MUTED);
+    lv_obj_set_width(extra_, width_);
+    // The tile's name from the editor, "Alarm" without one: shown on a tile that is high enough.
+    name_ = c.name != nullptr && c.name[0] ? std::string(c.name) : std::string(plugin_->text("alarm"));
+    title_ = centred_label(c.parent, Font::BODY, theme::MUTED);
+    lv_obj_set_width(title_, width_);
   }
 
   void on_tick(uint32_t epoch) override { paint(epoch); }
@@ -103,12 +116,23 @@ class AlarmTile : public tessera::Tile {
  private:
   void paint(uint32_t epoch) {
     const std::string time = plugin_->time_text(epoch);
-    std::string status;
-    const Tone state = state_line(plugin_, epoch, width_, status);
+    std::string status, extra;
+    const Tone state = state_line(plugin_, epoch, width_, status, extra);
     const int sh = ui::line_height(Font::BODY);
-    const Font face = fitting(time, width_, height_ - sh);
+    // The countdown on a line of its own, then the title above the time: each only where the time stays large.
+    const int large = ui::line_height(Font::VALUE);
+    const bool second = !extra.empty() && height_ >= large + 2 * sh;
+    const bool titled = height_ >= large + (second ? 3 : 2) * sh;
+    const int under = (second ? 2 : 1) * sh, over = titled ? sh : 0;
+    const Font face = fitting(time, width_, height_ - under - over);
     const int th = ui::line_height(face);
-    const int top = std::max(0, (height_ - th - sh) / 2);
+    const int top = std::max(0, (height_ - th - under - over) / 2) + over;
+    ui::set_text(title_, titled ? name_ : std::string());
+    ui::set_color(title_, theme::MUTED);
+    lv_obj_set_pos(title_, 0, top - over);
+    ui::set_text(extra_, second ? extra : std::string());
+    ui::set_tone(extra_, state, theme::MUTED);
+    lv_obj_set_pos(extra_, 0, top + th + sh);
     ui::set_font(time_, face);
     ui::set_text(time_, time);
     ui::set_tone(time_, plugin_->ringing() ? Tone::ALERT : Tone::NORMAL, plugin_->enabled() ? theme::INK : theme::MUTED);
@@ -120,7 +144,8 @@ class AlarmTile : public tessera::Tile {
 
   AlarmClock *plugin_;
   int tile_ = -1, width_ = 0, height_ = 0;
-  lv_obj_t *time_{}, *status_{};
+  std::string name_;
+  lv_obj_t *time_{}, *status_{}, *extra_{}, *title_{};
 };
 
 // The card: the time large, six keys that move it, and two that turn the alarm on and choose its days.
@@ -210,8 +235,8 @@ class AlarmCard : public tessera::Card {
     const int iw = ui::line_height(Font::ICON);
     ui::set_tone(icon_, plugin_->enabled() ? Tone::GOOD : Tone::NORMAL, theme::MUTED);
     lv_obj_set_pos(icon_, std::max(0, static_cast<int>(at.x) - iw - ui::px(8)), top + (th - iw) / 2);
-    std::string status;
-    const Tone state = state_line(plugin_, epoch, width_, status);
+    std::string status, extra;
+    const Tone state = state_line(plugin_, epoch, width_, status, extra);
     ui::set_text(status_, status);
     ui::set_tone(status_, state, theme::MUTED);
     lv_obj_set_pos(status_, 0, top + th);
