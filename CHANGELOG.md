@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.2 - 2026-11-15
+
+- A large tile uses its room: the time is drawn enlarged and the words take a larger font.
+
 ## 0.3.1 - 2026-11-15
 
 - The tile grows to 9 x 9 cells.

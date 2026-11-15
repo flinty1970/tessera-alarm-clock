@@ -124,7 +124,7 @@ class AlarmTile : public tessera::Tile {
     const std::string time = plugin_->time_text(epoch);
     std::string status, extra;
     const Tone state = state_line(plugin_, epoch, width_, status, extra);
-    const int sh = ui::line_height(Font::BODY);
+    int sh = ui::line_height(Font::BODY);
     // The title is always above the time, which takes a smaller font on a low tile; the countdown gets a line of its
     // own only where the time stays large.
     const int large = ui::line_height(Font::VALUE), least = ui::line_height(Font::BODY);
@@ -132,10 +132,33 @@ class AlarmTile : public tessera::Tile {
     const bool lined = height_ >= least + 2 * sh || name_.empty();
     const bool titled = !name_.empty() && height_ >= least + sh;
     const bool second = lined && !extra.empty() && height_ >= large + (titled ? 3 : 2) * sh;
+    // A large tile uses its room: the words take the largest font in which they fit across and that leaves the time
+    // two thirds of the height, and the time itself is drawn enlarged (the screen's largest font is made for a tile of
+    // two or three cells).
+    Font words = Font::BODY;
+    const int lines = (lined ? 1 : 0) + (second ? 1 : 0) + (titled ? 1 : 0);
+    for (Font f : {Font::HEADLINE, Font::TITLE, Font::BODY_LARGE}) {
+      if (lines == 0 || lines * ui::line_height(f) > height_ / 3) continue;
+      if (ui::text_width(status, f) > width_ || (second && ui::text_width(extra, f) > width_) ||
+          (titled && ui::text_width(name_, f) > width_))
+        continue;
+      words = f;
+      break;
+    }
+    sh = ui::line_height(words);
     const int under = ((lined ? 1 : 0) + (second ? 1 : 0)) * sh, over = titled ? sh : 0;
     const Font face = fitting(time, width_, height_ - under - over);
-    const int th = ui::line_height(face);
+    const int th0 = ui::line_height(face), tw0 = ui::text_width(time, face) + ui::px(4);
+    int scale = 256;   // LVGL's 256 is life size
+    if (face == Font::VALUE && ui::pictures())   // a screen with the memory for pictures has it for this too
+      for (int s : {1024, 896, 768, 640, 512, 448, 384, 320})
+        if (tw0 * s / 256 <= width_ * 9 / 10 && th0 * s / 256 <= height_ - under - over) {
+          scale = s;
+          break;
+        }
+    const int th = th0 * scale / 256;
     const int top = std::max(0, (height_ - th - under - over) / 2) + over;
+    for (lv_obj_t *part : {title_, status_, extra_}) ui::set_font(part, words);
     show(title_, titled);
     ui::set_text(title_, titled ? name_ : std::string());
     ui::set_color(title_, theme::MUTED);
@@ -148,7 +171,18 @@ class AlarmTile : public tessera::Tile {
     ui::set_font(time_, face);
     ui::set_text(time_, time);
     ui::set_tone(time_, plugin_->ringing() ? Tone::ALERT : Tone::NORMAL, plugin_->enabled() ? theme::INK : theme::MUTED);
-    lv_obj_set_pos(time_, 0, top);
+    // Enlarged, the label is as wide as its text and grows from its middle; life size it spans the tile as before.
+    if (scale != 256) {
+      lv_obj_set_width(time_, tw0);
+      lv_obj_set_style_transform_pivot_x(time_, tw0 / 2, 0);
+      lv_obj_set_style_transform_pivot_y(time_, th0 / 2, 0);
+      lv_obj_set_style_transform_scale(time_, scale, 0);
+      lv_obj_set_pos(time_, (width_ - tw0) / 2, top + (th - th0) / 2);
+    } else {
+      lv_obj_set_width(time_, width_);
+      lv_obj_set_style_transform_scale(time_, 256, 0);
+      lv_obj_set_pos(time_, 0, top);
+    }
     ui::set_text(status_, status);
     ui::set_tone(status_, state, theme::MUTED);
     lv_obj_set_pos(status_, 0, top + th);
