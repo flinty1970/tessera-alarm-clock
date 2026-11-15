@@ -1,0 +1,69 @@
+# What a screen gets when it takes this plugin: the alarm itself (on or off, its hour and minute, weekdays only), kept on
+# the screen across a restart and shown in Home Assistant, and a sensor that says the alarm rings, for an automation of
+# your own (lights that come on, music on a speaker).
+switch:
+  - platform: template
+    id: alarm_clock_on
+    name: "Alarm"
+    icon: mdi:alarm
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+  - platform: template
+    id: alarm_clock_weekdays
+    name: "Alarm weekdays only"
+    icon: mdi:calendar-week
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    entity_category: config
+
+number:
+  - platform: template
+    id: alarm_clock_hour
+    name: "Alarm hour"
+    icon: mdi:clock-outline
+    min_value: 0
+    max_value: 23
+    step: 1
+    mode: box
+    optimistic: true
+    initial_value: 7
+    restore_value: true
+  - platform: template
+    id: alarm_clock_minute
+    name: "Alarm minute"
+    icon: mdi:clock-outline
+    min_value: 0
+    max_value: 59
+    step: 1
+    mode: box
+    optimistic: true
+    initial_value: 0
+    restore_value: true
+
+  - platform: template
+    id: alarm_clock_snooze
+    name: "Alarm snooze minutes"
+    icon: mdi:alarm-snooze
+    min_value: 1
+    max_value: 30
+    step: 1
+    mode: box
+    unit_of_measurement: min
+    optimistic: true
+    initial_value: 9
+    restore_value: true
+    entity_category: config
+
+binary_sensor:
+  - platform: template
+    id: alarm_clock_ringing
+    name: "Alarm ringing"
+    icon: mdi:alarm-bell
+
+alarm_clock:
+  enabled: alarm_clock_on
+  weekdays: alarm_clock_weekdays
+  hour: alarm_clock_hour
+  minute: alarm_clock_minute
+  snooze: alarm_clock_snooze
+  ringing: alarm_clock_ringing

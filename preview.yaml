@@ -1,0 +1,9 @@
+# What tools/preview.py shows: the alarm tile on every kind of screen, and the card that sets it.
+tiles:
+  - tile: alarm
+    name: Alarm
+  - tile: alarm
+    name: Alarm
+    sizes: [2x1, 2x2]
+cards:
+  - card: alarm

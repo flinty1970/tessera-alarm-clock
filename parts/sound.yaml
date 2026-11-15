@@ -1,0 +1,31 @@
+# The alarm on the screen's speaker (ts_speaker, the feature speaker): the app builds this part only on a screen that
+# has one. A switch turns the sound off and leaves the alarm on the glass and in Home Assistant, and a list chooses
+# which of the four sounds rings.
+switch:
+  - platform: template
+    id: alarm_clock_sound_on
+    name: "Alarm sound"
+    icon: mdi:volume-high
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    entity_category: config
+
+select:
+  - platform: template
+    id: alarm_clock_tone
+    name: "Alarm tone"
+    icon: mdi:music-note
+    optimistic: true
+    options:
+      - "Beeps"
+      - "Gentle chime"
+      - "Rising"
+      - "Classic alarm"
+    initial_option: "Beeps"
+    restore_value: true
+    entity_category: config
+
+alarm_clock:
+  speaker: ts_speaker
+  sound_on: alarm_clock_sound_on
+  tone: alarm_clock_tone
