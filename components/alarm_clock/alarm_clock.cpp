@@ -17,6 +17,12 @@ static lv_obj_t *centred_label(lv_obj_t *parent, Font font, theme::Role role) {
   return label;
 }
 
+// A part that has no room is hidden, not drawn outside its tile or card.
+static void show(lv_obj_t *part, bool on) {
+  if (on) lv_obj_clear_flag(part, LV_OBJ_FLAG_HIDDEN);
+  else lv_obj_add_flag(part, LV_OBJ_FLAG_HIDDEN);
+}
+
 // The largest of the screen's text fonts that `text` fits in, across and high.
 static Font fitting(const std::string &text, int width, int height) {
   for (Font f : {Font::VALUE, Font::HEADLINE, Font::TITLE, Font::BODY_LARGE})
@@ -35,10 +41,10 @@ struct Key {
     block = ui::block(parent, theme::RAISED);
     lv_obj_set_pos(block, x, y);
     lv_obj_set_size(block, w, h);
-    label = centred_label(parent, Font::BODY_LARGE, theme::INK);
+    label = centred_label(block, Font::BODY_LARGE, theme::INK);
     const int lh = ui::line_height(Font::BODY_LARGE);
     lv_obj_set_width(label, w);
-    lv_obj_set_pos(label, x, y + (h - lh) / 2);
+    lv_obj_set_pos(label, 0, (h - lh) / 2);
   }
   // Its word, and whether it stands out (the accent) or is one key of several.
   void paint(const std::string &text, bool accent) { paint(text, accent ? Tone::ACCENT : Tone::NORMAL); }
@@ -121,19 +127,24 @@ class AlarmTile : public tessera::Tile {
     const int sh = ui::line_height(Font::BODY);
     // The title is always above the time, which takes a smaller font on a low tile; the countdown gets a line of its
     // own only where the time stays large.
-    const int large = ui::line_height(Font::VALUE);
-    const bool titled = !name_.empty();
-    const bool second = !extra.empty() && height_ >= large + (titled ? 3 : 2) * sh;
-    const int under = (second ? 2 : 1) * sh, over = titled ? sh : 0;
+    const int large = ui::line_height(Font::VALUE), least = ui::line_height(Font::BODY);
+    // On a tile too low for all of it the line under the time goes first, then the title.
+    const bool lined = height_ >= least + 2 * sh || name_.empty();
+    const bool titled = !name_.empty() && height_ >= least + sh;
+    const bool second = lined && !extra.empty() && height_ >= large + (titled ? 3 : 2) * sh;
+    const int under = ((lined ? 1 : 0) + (second ? 1 : 0)) * sh, over = titled ? sh : 0;
     const Font face = fitting(time, width_, height_ - under - over);
     const int th = ui::line_height(face);
     const int top = std::max(0, (height_ - th - under - over) / 2) + over;
+    show(title_, titled);
     ui::set_text(title_, titled ? name_ : std::string());
     ui::set_color(title_, theme::MUTED);
     lv_obj_set_pos(title_, 0, top - over);
+    show(extra_, second);
     ui::set_text(extra_, second ? extra : std::string());
     ui::set_tone(extra_, state, theme::MUTED);
-    lv_obj_set_pos(extra_, 0, top + th + sh);
+    lv_obj_set_pos(extra_, 0, second ? top + th + sh : 0);
+    show(status_, lined);
     ui::set_font(time_, face);
     ui::set_text(time_, time);
     ui::set_tone(time_, plugin_->ringing() ? Tone::ALERT : Tone::NORMAL, plugin_->enabled() ? theme::INK : theme::MUTED);
@@ -217,25 +228,30 @@ class AlarmCard : public tessera::Card {
   void paint(uint32_t epoch) {
     static const char *const WORD[6] = {"hour_down", "hour_up", "ten_down", "ten_up", "minute_down", "minute_up"};
     const std::string time = plugin_->time_text(epoch);
-    // Three lines: the time it is now, the alarm's time large, and when it rings.
-    const Font face = fitting(time, width_, head_ - 2 * status_h_);
-    const int th = ui::line_height(face);
-    const int first = std::max(0, (head_ - th - 2 * status_h_) / 2);
-    const int top = first + status_h_;
-    ui::set_text(now_, epoch ? tessera::fill(plugin_->text("now"), "time", tessera::clock_text(epoch)) : std::string());
+    // Three lines: the time it is now, the alarm's time large, and when it rings. On a small card the first gives way,
+    // so the alarm's time keeps a size worth reading.
+    const int sh = status_h_, iw = ui::line_height(Font::ICON), gap = ui::px(8);
+    const bool with_now = head_ >= ui::line_height(Font::HEADLINE) + 2 * sh;
+    const int lines = (with_now ? 2 : 1) * sh;
+    const Font face = fitting(time, width_, head_ - lines);
+    const int th = ui::line_height(face), tw = ui::text_width(time, face);
+    const int first = std::max(0, (head_ - th - lines) / 2);
+    const int top = first + (with_now ? sh : 0);
+    show(now_, with_now);
+    ui::set_text(now_, with_now && epoch ? tessera::fill(plugin_->text("now"), "time", tessera::clock_text(epoch)) : std::string());
     ui::set_color(now_, theme::MUTED);
     lv_obj_set_pos(now_, 0, first);
+    // The icon left of the time, the two centred together; without it where it is higher than the time or has no room.
+    const bool with_icon = iw <= th && iw + gap + tw <= width_;
+    const int left = with_icon ? (width_ - iw - gap - tw) / 2 : (width_ - tw) / 2;
     ui::set_font(time_, face);
     ui::set_text(time_, time);
     ui::set_tone(time_, plugin_->ringing() ? Tone::ALERT : Tone::NORMAL, plugin_->enabled() ? theme::INK : theme::MUTED);
-    lv_obj_set_pos(time_, 0, top);
-    // The icon sits left of the time's first figure, wherever the centred text begins.
-    lv_obj_update_layout(time_);
-    lv_point_t at{};
-    lv_label_get_letter_pos(time_, 0, &at);
-    const int iw = ui::line_height(Font::ICON);
+    lv_obj_set_width(time_, tw + 2);
+    lv_obj_set_pos(time_, left + (with_icon ? iw + gap : 0), top);
+    show(icon_, with_icon);
     ui::set_tone(icon_, plugin_->enabled() ? Tone::GOOD : Tone::NORMAL, theme::MUTED);
-    lv_obj_set_pos(icon_, std::max(0, static_cast<int>(at.x) - iw - ui::px(8)), top + (th - iw) / 2);
+    lv_obj_set_pos(icon_, left, top + (th - iw) / 2);
     std::string status, extra;
     const Tone state = state_line(plugin_, epoch, width_, status, extra);
     ui::set_text(status_, status);
