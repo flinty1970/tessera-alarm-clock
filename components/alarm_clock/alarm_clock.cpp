@@ -686,12 +686,24 @@ void AlarmClock::start_ring(uint32_t epoch) {
   close_at_ = 0;
   ring_started_ = epoch;
   snooze_until_ = 0;
+#ifdef USE_SPEAKER
+  // At its loudest while it rings, whatever volume the screen was left at; end_ring() puts that back.
+  if (speaker_ != nullptr && !loud_ && (full_volume_ == nullptr || full_volume_->state)) {
+    volume_before_ = speaker_->get_volume();
+    speaker_->set_volume(1.0f);
+    loud_ = true;
+  }
+#endif
   tessera::show_popup(this, [this]() { return new RingPopup(this); });
   tessera::refresh();
 }
 
 void AlarmClock::end_ring() {
   ringing_ = false;
+#ifdef USE_SPEAKER
+  if (loud_ && speaker_ != nullptr) speaker_->set_volume(volume_before_);
+  loud_ = false;
+#endif
   // The popup stays for a moment: closed at once, the rest of the same touch would land on the tile under it.
   close_at_ = millis() + CLOSE_AFTER_MS;
   if (!close_at_) close_at_ = 1;

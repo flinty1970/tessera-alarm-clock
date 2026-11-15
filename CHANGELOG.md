@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.2 - 2026-11-15
+
+- The alarm rings at the speaker's full volume, whatever the screen's volume, and puts that back afterwards. The
+  switch "Alarm full volume" turns it off.
+
 ## 0.5.1 - 2026-11-15
 
 - The wheels show three whole rows, and the keys under them are two rows: on, days and sound, then the seven days.

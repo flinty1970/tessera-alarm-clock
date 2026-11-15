@@ -9,6 +9,14 @@ switch:
     optimistic: true
     restore_mode: RESTORE_DEFAULT_ON
     entity_category: config
+  # While the alarm rings the speaker is at its loudest, whatever the screen's volume; it goes back afterwards.
+  - platform: template
+    id: alarm_clock_full_volume
+    name: "Alarm full volume"
+    icon: mdi:volume-plus
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    entity_category: config
 
 select:
   - platform: template
@@ -28,4 +36,5 @@ select:
 alarm_clock:
   speaker: ts_speaker
   sound_on: alarm_clock_sound_on
+  full_volume: alarm_clock_full_volume
   tone: alarm_clock_tone

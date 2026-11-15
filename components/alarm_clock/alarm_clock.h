@@ -32,7 +32,12 @@ class AlarmClock : public Component, public tessera::Plugin {
   void set_ringing_sensor(binary_sensor::BinarySensor *s) { ringing_sensor_ = s; }
 #ifdef USE_SPEAKER
   // The part parts/sound.yaml, on a screen with a speaker: the alarm beeps.
-  void set_speaker(speaker::Speaker *s) { sounds_.set_speaker(s); }
+  void set_speaker(speaker::Speaker *s) {
+    speaker_ = s;
+    sounds_.set_speaker(s);
+  }
+  // The switch "Alarm full volume": the speaker at its loudest while the alarm rings.
+  void set_full_volume(switch_::Switch *s) { full_volume_ = s; }
   static constexpr int SOUNDS = 4;
   void set_alarm(int index, tessera::Sound s) {
     if (index >= 0 && index < SOUNDS) alarm_[index] = s;
@@ -97,7 +102,10 @@ class AlarmClock : public Component, public tessera::Plugin {
   // The sound the list chose.
   const tessera::Sound *chosen() const;
   tessera::Sound alarm_[SOUNDS];
-  switch_::Switch *sound_on_{};
+  switch_::Switch *sound_on_{}, *full_volume_{};
+  speaker::Speaker *speaker_{};
+  float volume_before_ = 0;
+  bool loud_ = false;
 #ifdef USE_SELECT
   select::Select *tone_{};
 #endif
