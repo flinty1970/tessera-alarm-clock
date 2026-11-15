@@ -113,6 +113,7 @@ class AlarmTile : public tessera::Tile {
     name_ = c.name != nullptr && c.name[0] ? std::string(c.name) : std::string(plugin_->text("alarm"));
     title_ = centred_label(c.parent, Font::BODY, theme::MUTED);
     lv_obj_set_width(title_, width_);
+    icon_ = ui::label(c.parent, Font::ICON_SMALL, theme::MUTED);
   }
 
   void on_tick(uint32_t epoch) override { paint(epoch); }
@@ -162,7 +163,25 @@ class AlarmTile : public tessera::Tile {
     show(title_, titled);
     ui::set_text(title_, titled ? name_ : std::string());
     ui::set_color(title_, theme::MUTED);
-    lv_obj_set_pos(title_, 0, top - over);
+    // An alarm clock before the title, in the colour of the line under the time (a bell while it rings, the sleeping
+    // sign while a snooze waits): the two stand in the middle as one.
+    const Font icon_font = ui::line_height(Font::ICON) <= sh ? Font::ICON : Font::ICON_SMALL;
+    const std::string icon = ui::icon(plugin_->ringing() ? 0xF009E : plugin_->snoozed_until() ? 0xF04B2 : 0xF0020);
+    const int iw = ui::text_width(icon, icon_font) + ui::px(6), nw = ui::text_width(name_, words) + ui::px(4);
+    const bool iconed = titled && iw + nw <= width_;
+    show(icon_, iconed);
+    if (iconed) {
+      const int x0 = (width_ - (iw + nw)) / 2;
+      ui::set_font(icon_, icon_font);
+      ui::set_text(icon_, icon);
+      ui::set_tone(icon_, state, theme::MUTED);
+      lv_obj_set_pos(icon_, x0, top - over + (sh - ui::line_height(icon_font)) / 2);
+      lv_obj_set_width(title_, nw);
+      lv_obj_set_pos(title_, x0 + iw, top - over);
+    } else {
+      lv_obj_set_width(title_, width_);
+      lv_obj_set_pos(title_, 0, top - over);
+    }
     show(extra_, second);
     ui::set_text(extra_, second ? extra : std::string());
     ui::set_tone(extra_, state, theme::MUTED);
@@ -191,7 +210,7 @@ class AlarmTile : public tessera::Tile {
   AlarmClock *plugin_;
   int tile_ = -1, width_ = 0, height_ = 0;
   std::string name_;
-  lv_obj_t *time_{}, *status_{}, *extra_{}, *title_{};
+  lv_obj_t *time_{}, *status_{}, *extra_{}, *title_{}, *icon_{};
 };
 
 // The card: the time large, six keys that move it, and two that turn the alarm on and choose its days.

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.3 - 2026-11-15
+
+- An alarm clock icon before the tile's title, in the colour of the alarm's state.
+
 ## 0.3.2 - 2026-11-15
 
 - A large tile uses its room: the time is drawn enlarged and the words take a larger font.

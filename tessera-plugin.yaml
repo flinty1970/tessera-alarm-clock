@@ -2,7 +2,7 @@
 # shows Snooze and Stop; on a screen with a speaker it beeps. Every name, label and hint is a key into
 # translations/<language>.json, part "app".
 id: alarm_clock
-version: 0.3.2
+version: 0.3.3
 api: "0.18"
 icon: alarm
 maintainer: flinty1970
@@ -19,7 +19,7 @@ tiles:
   - id: alarm
     name: tile_name
     icon: alarm
-    sizes: { min: 1x1, max: 9x9 }
+    sizes: { min: 1x1, max: 9x9, full: true }
     memory: 500
     example: tile_example
 
