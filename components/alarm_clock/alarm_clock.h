@@ -98,6 +98,7 @@ class AlarmClock : public Component, public tessera::Plugin {
   binary_sensor::BinarySensor *ringing_sensor_{};
   bool ringing_ = false;
   uint32_t ring_started_ = 0, snooze_until_ = 0, handled_minute_ = 0, close_at_ = 0;
+  void alarm_volume(bool on);
 #ifdef USE_SPEAKER
   // The sound the list chose.
   const tessera::Sound *chosen() const;

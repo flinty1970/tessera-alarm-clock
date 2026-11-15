@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.6 - 2026-11-15
+
+- A sound you choose is played once at the alarm's volume, as loud as it will ring, not at the screen's volume.
+
 ## 0.5.5 - 2026-11-15
 
 - "Alarm volume" is the speaker's real volume again, 0 to 100 %, and 80 unless you change it.

@@ -65,7 +65,7 @@ Two automations people ask for (replace `bedroom` with your screen's name):
 - While a snooze waits, the alarm's card has **Cancel snooze**.
 - On a screen with a speaker the card has a **Sound** key: each tap takes the next sound and plays it once. **Alarm
   tone** in Home Assistant does the same.
-- The sound needs a speaker on the screen and follows the screen's volume. Without one the alarm still wakes the
+- The sound needs a speaker on the screen. It rings, and a sound you choose plays, at **Alarm volume**, not the screen's volume. Without one the alarm still wakes the
   screen and shows the popup.
 
 ## Sounds

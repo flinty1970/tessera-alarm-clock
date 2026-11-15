@@ -686,24 +686,30 @@ void AlarmClock::start_ring(uint32_t epoch) {
   close_at_ = 0;
   ring_started_ = epoch;
   snooze_until_ = 0;
-#ifdef USE_SPEAKER
   // At the alarm's own volume while it rings, whatever volume the screen was left at; end_ring() puts that back.
-  if (speaker_ != nullptr && !loud_ && ring_volume_ != nullptr && ring_volume_->state == ring_volume_->state) {
-    volume_before_ = speaker_->get_volume();
-    speaker_->set_volume(std::min(1.0f, std::max(0.0f, ring_volume_->state / 100.0f)));
-    loud_ = true;
-  }
-#endif
+  alarm_volume(true);
   tessera::show_popup(this, [this]() { return new RingPopup(this); });
   tessera::refresh();
 }
 
+// The speaker at the alarm's own volume (the number "Alarm volume"), or back at the volume it had before.
+void AlarmClock::alarm_volume(bool on) {
+#ifdef USE_SPEAKER
+  if (speaker_ == nullptr) return;
+  if (on && !loud_ && ring_volume_ != nullptr && ring_volume_->state == ring_volume_->state) {
+    volume_before_ = speaker_->get_volume();
+    speaker_->set_volume(std::min(1.0f, std::max(0.0f, ring_volume_->state / 100.0f)));
+    loud_ = true;
+  } else if (!on && loud_) {
+    speaker_->set_volume(volume_before_);
+    loud_ = false;
+  }
+#endif
+}
+
 void AlarmClock::end_ring() {
   ringing_ = false;
-#ifdef USE_SPEAKER
-  if (loud_ && speaker_ != nullptr) speaker_->set_volume(volume_before_);
-  loud_ = false;
-#endif
+  alarm_volume(false);
   // The popup stays for a moment: closed at once, the rest of the same touch would land on the tile under it.
   close_at_ = millis() + CLOSE_AFTER_MS;
   if (!close_at_) close_at_ = 1;
@@ -758,13 +764,19 @@ void AlarmClock::on_interval(uint32_t now_ms) {
     heard_tone_ = tone;
     if (!ringing_ && allowed) {
       sounds_.stop();
+      // Heard as loud as the alarm will ring, not at the screen's volume.
+      alarm_volume(true);
       sounds_.play(*sound);
       preview_until_ = now_ms + 9000;
       if (!preview_until_) preview_until_ = 1;
     }
   }
 #endif
-  if (preview_until_ && (ringing_ || !allowed || static_cast<int32_t>(now_ms - preview_until_) >= 0)) preview_until_ = 0;
+  const bool previewing = preview_until_ != 0;
+  // Over once the sound has played (it needs a moment to start), and at the latest after nine seconds.
+  const bool played = preview_until_ && static_cast<int32_t>(now_ms - (preview_until_ - 9000)) >= 800 && !sounds_.playing();
+  if (preview_until_ && (ringing_ || !allowed || played || static_cast<int32_t>(now_ms - preview_until_) >= 0)) preview_until_ = 0;
+  if (previewing && !preview_until_ && !ringing_) alarm_volume(false);
   if (sounding && !sounds_.playing() && now_ms - rang_at_ >= 2600) {
     sounds_.play(*sound);
     rang_at_ = now_ms;
