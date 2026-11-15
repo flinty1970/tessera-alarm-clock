@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1 - 2026-11-15
+
+- The tile grows to 9 x 9 cells.
+
 ## 0.3.0 - 2026-11-14
 
 - A **Sound** key on the alarm's card takes the next sound and plays it once; a sound chosen in Home Assistant plays once too.
